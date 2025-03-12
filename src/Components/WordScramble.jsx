@@ -19,11 +19,36 @@ const fetchRandomWord = async () => {
   }
 };
 
+const fetchWordHint = async (word) => {
+  try {
+    const response = await fetch(
+      `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`
+    );
+    const data = await response.json();
+    const definition = data[0]?.meanings[0]?.definitions[0]?.definition;
+    if (definition) return definition;
+  } catch (error) {
+    console.error("Error fetching definition:", error);
+  }
+
+  // If no definition, try getting synonyms
+  try {
+    const response = await fetch(`https://api.datamuse.com/words?ml=${word}`);
+    const data = await response.json();
+    if (data.length > 0) return `Similar word: ${data[0].word}`;
+  } catch (error) {
+    console.error("Error fetching synonyms:", error);
+  }
+
+  return "No hint available.";
+};
+
 const WordScramble = () => {
   const [originalWord, setOriginalWord] = useState("");
   const [scrambled, setScrambled] = useState("");
   const [userGuess, setUserGuess] = useState("");
   const [message, setMessage] = useState("");
+  const [hint, setHint] = useState("");
 
   useEffect(() => {
     getNewWord();
@@ -33,6 +58,7 @@ const WordScramble = () => {
     const newWord = await fetchRandomWord();
     setOriginalWord(newWord);
     setScrambled(scrambleWord(newWord));
+    setHint("");
   };
 
   const checkGuess = () => {
@@ -47,6 +73,11 @@ const WordScramble = () => {
     setUserGuess("");
     setMessage("");
     getNewWord();
+  };
+
+  const showHint = async () => {
+    const hintData = await fetchWordHint(originalWord);
+    setHint(hintData);
   };
 
   return (
@@ -75,6 +106,10 @@ const WordScramble = () => {
             Next Word
           </button>
         </div>
+        <button className="btn btn-info w-100 mt-3" onClick={showHint}>
+          Hint
+        </button>
+        {hint && <p className="mt-3 fw-bold text-light">Hint: {hint}</p>}
         {message && <p className="mt-3 fw-bold text-info">{message}</p>}
       </div>
     </div>
